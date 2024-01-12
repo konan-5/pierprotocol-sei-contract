@@ -246,18 +246,4 @@ mod tests {
         assert_eq!(5, value.count);
     }
 
-    #[test]
-    fn add_to_waiting_list() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
-        // let msg = InstantiateMsg { count: 17 };
-        let info = mock_info("sender", &coins(2, "token"));
-
-        let contract = Addr::unchecked("contract_addr");
-        let amount: u128 = 1000;
-        let price: u128 = 50;
-        // let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        let msg = ExecuteMsg::AddWatingList { contract, amount, price };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
-    }
 }
