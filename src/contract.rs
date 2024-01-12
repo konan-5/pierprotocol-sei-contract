@@ -5,7 +5,7 @@ use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE, WaitingList, WAITINGLIST, WAITINGLIST_COUNTER};
+use crate::state::{State, STATE, BookEntry, BOOK_LIST, BOOK_ENTRY_SEQ};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pierprotocol-sei";
@@ -41,23 +41,23 @@ pub fn execute(
     match msg {
         ExecuteMsg::Increment {} => try_increment(deps),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
-        ExecuteMsg::CreateWatingItem { contract, amount, price } => execute_create_waiting_item(deps, info, contract, amount, price),
-        ExecuteMsg::UpdateWatingItem { id, contract, amount, price } => execute_update_waiting_item(deps, info, id, contract, amount, price),
-        ExecuteMsg::DeleteWatingItem { id } => execute_delete_waiting_item( deps, info, id ),
+        ExecuteMsg::CreateBookEntry { contract, amount, price } => execute_create_book_entry(deps, info, contract, amount, price),
+        ExecuteMsg::UpdateBookEntry { id, contract, amount, price } => execute_update_book_entry(deps, info, id, contract, amount, price),
+        ExecuteMsg::DeleteBookEntry { id } => execute_delete_book_entry( deps, info, id ),
     }
 }
 
-pub fn execute_create_waiting_item(
+pub fn execute_create_book_entry(
     deps: DepsMut, 
     info: MessageInfo, 
     contract: Addr, 
     amount: u128, 
     price: u128,
 ) -> Result<Response, ContractError> {
-    let id = WAITINGLIST_COUNTER.update::<_, cosmwasm_std::StdError>(deps.storage, |id| Ok(id + 1))?;
+    let id = BOOK_ENTRY_SEQ.update::<_, cosmwasm_std::StdError>(deps.storage, |id| Ok(id + 1))?;
     
     let sender = info.sender;
-    let waiting_item = WaitingList {
+    let book_entry = BookEntry {
         id,
         owner: sender,
         contract,
@@ -65,14 +65,14 @@ pub fn execute_create_waiting_item(
         price,
     };
 
-    WAITINGLIST.save(deps.storage, id, &waiting_item)?;
+    BOOK_LIST.save(deps.storage, id, &book_entry)?;
 
     Ok(Response::new()
-        .add_attribute("method", "execute_create_waiting_item")
-        .add_attribute("new_waiting_item_id", id.to_string()))
+        .add_attribute("method", "execute_create_book_entry")
+        .add_attribute("new_book_entry", id.to_string()))
 }
 
-pub fn execute_update_waiting_item(
+pub fn execute_update_book_entry(
     deps: DepsMut,
     info: MessageInfo,
     id: u64,
@@ -81,37 +81,37 @@ pub fn execute_update_waiting_item(
     price: u128,
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
-    let waiting_item = WAITINGLIST.load(deps.storage, id)?;
-    if waiting_item.owner != sender {
+    let book_entry = BOOK_LIST.load(deps.storage, id)?;
+    if book_entry.owner != sender {
         return Err(ContractError::Unauthorized {});
     }
-    let update_waiting_item = WaitingList {
+    let updated_book_entry = BookEntry {
         id,
         owner: sender,
         contract,
         amount,
         price,
     };
-    WAITINGLIST.save(deps.storage, id, &update_waiting_item)?;
+    BOOK_LIST.save(deps.storage, id, &updated_book_entry)?;
     Ok(Response::new()
-        .add_attribute("method", "execute_update_waiting_item")
-        .add_attribute("updated_waiting_item_id", id.to_string()))
+        .add_attribute("method", "execute_update_book_entry")
+        .add_attribute("updated_book_entry_id", id.to_string()))
 }
 
-pub fn execute_delete_waiting_item(
+pub fn execute_delete_book_entry(
     deps: DepsMut,
     info: MessageInfo,
     id: u64,
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
-    let waiting_item = WAITINGLIST.load(deps.storage, id)?;
-    if waiting_item.owner != sender {
+    let book_entry = BOOK_LIST.load(deps.storage, id)?;
+    if book_entry.owner != sender {
         return Err(ContractError::Unauthorized {});
     }
-    WAITINGLIST.remove(deps.storage, id);
+    BOOK_LIST.remove(deps.storage, id);
     Ok(Response::new()
-        .add_attribute("method", "execute_delete_waiting_item")
-        .add_attribute("deleted_waiting_item_id", id.to_string()))
+        .add_attribute("method", "execute_delete_book_entry")
+        .add_attribute("deleted_book_entry_id", id.to_string()))
 }
 
 pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
@@ -138,6 +138,8 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
+        // QueryMsg::WatingItem { id } => to_binary(&query_waiting_item(deps, id)?),
+        // QueryMsg::WaitingList { start_after, limit },
     }
 }
 
@@ -145,6 +147,30 @@ fn query_count(deps: Deps) -> StdResult<CountResponse> {
     let state = STATE.load(deps.storage)?;
     Ok(CountResponse { count: state.count })
 }
+
+// fn query_waiting_item(deps: Deps, id: u64) -> StdResult<BookEntry> {
+//     let book_entry = BOOK_LIST.load(deps.storage, id)?;
+//     Ok(BookEntry {
+//         id: id,
+//         owner: book_entry.owner,
+//         contract: book_entry.contract,
+//         amount: book_entry.amount,
+//         price: book_entry.price,
+//     })
+// }
+
+// // Limits for pagination
+// const MAX_LIMIT: u32 = 30;
+// const DEFAULT_LIMIT: u32 = 10;
+// fn query_waiting_list(deps: Deps, start_after: u64, limit: u32) {
+//     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+//     let start = start_after.map(Bound::exclusive);
+//     let items = StdResult<Vec<_>> = WAITINGLIST
+//         .range(deps.storage, start, None, Order::Ascending)
+//         .take(limit)
+//         .collect();
+//     let result = 
+// }
 
 #[cfg(test)]
 mod tests {

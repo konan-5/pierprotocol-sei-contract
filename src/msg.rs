@@ -12,9 +12,9 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     Increment {},
     Reset { count: i32 },
-    CreateWatingItem { contract: Addr, amount: u128, price: u128 },
-    UpdateWatingItem { id: u64, contract: Addr, amount: u128, price: u128 },
-    DeleteWatingItem { id: u64 },
+    CreateBookEntry { contract: Addr, amount: u128, price: u128 },
+    UpdateBookEntry { id: u64, contract: Addr, amount: u128, price: u128 },
+    DeleteBookEntry { id: u64 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -22,6 +22,11 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     // GetCount returns the current count as a json-encoded number
     GetCount {},
+    // BookEntry { id: u64 },
+    // BookList {
+    //     start_after: Option<u64>,
+    //     limit: Option<u32>,
+    // },
 }
 
 // We define a custom struct for each query response
@@ -29,3 +34,7 @@ pub enum QueryMsg {
 pub struct CountResponse {
     pub count: i32,
 }
+
+// pub struct BookEntryResponse {
+//     pub entries: Vec<BookEntry>,
+// }

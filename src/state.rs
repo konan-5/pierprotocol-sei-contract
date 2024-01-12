@@ -11,7 +11,7 @@ pub struct State {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
-pub struct WaitingList {
+pub struct BookEntry {
     pub id: u64,
     pub owner: Addr,
     pub contract: Addr,
@@ -20,5 +20,5 @@ pub struct WaitingList {
 }
 
 pub const STATE: Item<State> = Item::new("state");
-pub const WAITINGLIST_COUNTER: Item<u64> = Item::new("waitinglist_counter");
-pub const WAITINGLIST: Map<u64, WaitingList> = Map::new("waitinglist");
+pub const BOOK_ENTRY_SEQ: Item<u64> = Item::new("book_entry_seq");
+pub const BOOK_LIST: Map<u64, BookEntry> = Map::new("book_list");
