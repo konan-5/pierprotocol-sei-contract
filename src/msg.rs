@@ -2,6 +2,8 @@ use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use cosmwasm_std::Addr;
 
+use crate::state::BookEntry;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub count: i32,
@@ -22,11 +24,11 @@ pub enum ExecuteMsg {
 pub enum QueryMsg {
     // GetCount returns the current count as a json-encoded number
     GetCount {},
-    // BookEntry { id: u64 },
-    // BookList {
-    //     start_after: Option<u64>,
-    //     limit: Option<u32>,
-    // },
+    BookEntry { id: u64 },
+    BookList {
+        start_after: Option<u64>,
+        limit: Option<u32>,
+    },
 }
 
 // We define a custom struct for each query response
@@ -35,6 +37,7 @@ pub struct CountResponse {
     pub count: i32,
 }
 
-// pub struct BookEntryResponse {
-//     pub entries: Vec<BookEntry>,
-// }
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct BookListResponse {
+    pub book_entrys: Vec<BookEntry>,
+}

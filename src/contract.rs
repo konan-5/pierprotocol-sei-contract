@@ -1,10 +1,11 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Addr};
 use cw2::set_contract_version;
+use cw_storage_plus::Bound;
 
 use crate::error::ContractError;
-use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg, BookListResponse};
 use crate::state::{State, STATE, BookEntry, BOOK_LIST, BOOK_ENTRY_SEQ};
 
 // version info for migration info
@@ -138,8 +139,8 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
-        // QueryMsg::WatingItem { id } => to_binary(&query_waiting_item(deps, id)?),
-        // QueryMsg::WaitingList { start_after, limit },
+        QueryMsg::BookEntry { id } => to_binary(&query_book_entry(deps, id)?),
+        QueryMsg::BookList { start_after, limit } => to_binary(&query_book_list(deps, start_after, limit)?),
     }
 }
 
@@ -148,29 +149,32 @@ fn query_count(deps: Deps) -> StdResult<CountResponse> {
     Ok(CountResponse { count: state.count })
 }
 
-// fn query_waiting_item(deps: Deps, id: u64) -> StdResult<BookEntry> {
-//     let book_entry = BOOK_LIST.load(deps.storage, id)?;
-//     Ok(BookEntry {
-//         id: id,
-//         owner: book_entry.owner,
-//         contract: book_entry.contract,
-//         amount: book_entry.amount,
-//         price: book_entry.price,
-//     })
-// }
+fn query_book_entry(deps: Deps, id: u64) -> StdResult<BookEntry> {
+    let book_entry = BOOK_LIST.load(deps.storage, id)?;
+    Ok(BookEntry {
+        id: id,
+        owner: book_entry.owner,
+        contract: book_entry.contract,
+        amount: book_entry.amount,
+        price: book_entry.price,
+    })
+}
 
-// // Limits for pagination
-// const MAX_LIMIT: u32 = 30;
-// const DEFAULT_LIMIT: u32 = 10;
-// fn query_waiting_list(deps: Deps, start_after: u64, limit: u32) {
-//     let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
-//     let start = start_after.map(Bound::exclusive);
-//     let items = StdResult<Vec<_>> = WAITINGLIST
-//         .range(deps.storage, start, None, Order::Ascending)
-//         .take(limit)
-//         .collect();
-//     let result = 
-// }
+// Limits for pagination
+const MAX_LIMIT: u32 = 30;
+const DEFAULT_LIMIT: u32 = 10;
+fn query_book_list(deps: Deps, start_after: Option<u64>, limit: Option<u32>) -> StdResult<BookListResponse> {
+    let limit = limit.unwrap_or(DEFAULT_LIMIT).min(MAX_LIMIT) as usize;
+    let start = start_after.map(Bound::exclusive);
+    let book_entrys: StdResult<Vec<_>> = BOOK_LIST
+        .range(deps.storage, start, None, Order::Ascending)
+        .take(limit)
+        .collect();
+    let result = BookListResponse {
+        book_entrys: book_entrys?.into_iter().map(|l| l.1).collect(),
+    };
+    Ok(result)
+}
 
 #[cfg(test)]
 mod tests {
