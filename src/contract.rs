@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Addr};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Addr, Uint128};
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
 
@@ -49,14 +49,14 @@ pub fn execute(
 }
 
 pub fn execute_create_book_entry(
-    deps: DepsMut, 
-    info: MessageInfo, 
-    contract: Addr, 
-    amount: u128, 
-    price: u128,
+    deps: DepsMut,
+    info: MessageInfo,
+    contract: Addr,
+    amount: Uint128,
+    price: Uint128,
 ) -> Result<Response, ContractError> {
     let id = BOOK_ENTRY_SEQ.update::<_, cosmwasm_std::StdError>(deps.storage, |id| Ok(id + 1))?;
-    
+
     let sender = info.sender;
     let book_entry = BookEntry {
         id,
@@ -78,8 +78,8 @@ pub fn execute_update_book_entry(
     info: MessageInfo,
     id: u64,
     contract: Addr,
-    amount: u128,
-    price: u128,
+    amount: Uint128,
+    price: Uint128,
 ) -> Result<Response, ContractError> {
     let sender = info.sender;
     let book_entry = BOOK_LIST.load(deps.storage, id)?;

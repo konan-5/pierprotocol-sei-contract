@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::Addr;
+use cosmwasm_std::{Addr, Uint128};
 
 use crate::state::BookEntry;
 
@@ -14,8 +14,8 @@ pub struct InstantiateMsg {
 pub enum ExecuteMsg {
     Increment {},
     Reset { count: i32 },
-    CreateBookEntry { contract: Addr, amount: u128, price: u128 },
-    UpdateBookEntry { id: u64, contract: Addr, amount: u128, price: u128 },
+    CreateBookEntry { contract: Addr, amount: Uint128, price: Uint128 },
+    UpdateBookEntry { id: u64, contract: Addr, amount: Uint128, price: Uint128 },
     DeleteBookEntry { id: u64 },
 }
 
