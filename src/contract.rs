@@ -1,11 +1,11 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Addr};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE};
+use crate::state::{State, STATE, WaitingList, WAITINGLIST, WAITINGLIST_COUNTER};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pierprotocol-sei";
@@ -41,7 +41,77 @@ pub fn execute(
     match msg {
         ExecuteMsg::Increment {} => try_increment(deps),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
+        ExecuteMsg::CreateWatingItem { contract, amount, price } => execute_create_waiting_item(deps, info, contract, amount, price),
+        ExecuteMsg::UpdateWatingItem { id, contract, amount, price } => execute_update_waiting_item(deps, info, id, contract, amount, price),
+        ExecuteMsg::DeleteWatingItem { id } => execute_delete_waiting_item( deps, info, id ),
     }
+}
+
+pub fn execute_create_waiting_item(
+    deps: DepsMut, 
+    info: MessageInfo, 
+    contract: Addr, 
+    amount: u128, 
+    price: u128,
+) -> Result<Response, ContractError> {
+    let id = WAITINGLIST_COUNTER.update::<_, cosmwasm_std::StdError>(deps.storage, |id| Ok(id + 1))?;
+    
+    let sender = info.sender;
+    let waiting_item = WaitingList {
+        id,
+        owner: sender,
+        contract,
+        amount,
+        price,
+    };
+
+    WAITINGLIST.save(deps.storage, id, &waiting_item)?;
+
+    Ok(Response::new()
+        .add_attribute("method", "execute_create_waiting_item")
+        .add_attribute("new_waiting_item_id", id.to_string()))
+}
+
+pub fn execute_update_waiting_item(
+    deps: DepsMut,
+    info: MessageInfo,
+    id: u64,
+    contract: Addr,
+    amount: u128,
+    price: u128,
+) -> Result<Response, ContractError> {
+    let sender = info.sender;
+    let waiting_item = WAITINGLIST.load(deps.storage, id)?;
+    if waiting_item.owner != sender {
+        return Err(ContractError::Unauthorized {});
+    }
+    let update_waiting_item = WaitingList {
+        id,
+        owner: sender,
+        contract,
+        amount,
+        price,
+    };
+    WAITINGLIST.save(deps.storage, id, &update_waiting_item)?;
+    Ok(Response::new()
+        .add_attribute("method", "execute_update_waiting_item")
+        .add_attribute("updated_waiting_item_id", id.to_string()))
+}
+
+pub fn execute_delete_waiting_item(
+    deps: DepsMut,
+    info: MessageInfo,
+    id: u64,
+) -> Result<Response, ContractError> {
+    let sender = info.sender;
+    let waiting_item = WAITINGLIST.load(deps.storage, id)?;
+    if waiting_item.owner != sender {
+        return Err(ContractError::Unauthorized {});
+    }
+    WAITINGLIST.remove(deps.storage, id);
+    Ok(Response::new()
+        .add_attribute("method", "execute_delete_waiting_item")
+        .add_attribute("deleted_waiting_item_id", id.to_string()))
 }
 
 pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
@@ -144,5 +214,20 @@ mod tests {
         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
         let value: CountResponse = from_binary(&res).unwrap();
         assert_eq!(5, value.count);
+    }
+
+    #[test]
+    fn add_to_waiting_list() {
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        // let msg = InstantiateMsg { count: 17 };
+        let info = mock_info("sender", &coins(2, "token"));
+
+        let contract = Addr::unchecked("contract_addr");
+        let amount: u128 = 1000;
+        let price: u128 = 50;
+        // let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let msg = ExecuteMsg::AddWatingList { contract, amount, price };
+        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
     }
 }
