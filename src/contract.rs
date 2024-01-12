@@ -117,14 +117,15 @@ pub fn execute_delete_book_entry(
 
 pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
     STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        state.count += 1;
+        // state.count += Uint128::from(1u128);
+        state.count += Uint128::new(1);
         Ok(state)
     })?;
 
     Ok(Response::new().add_attribute("method", "try_increment"))
 }
 
-pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Response, ContractError> {
+pub fn try_reset(deps: DepsMut, info: MessageInfo, count: Uint128) -> Result<Response, ContractError> {
     STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
         if info.sender != state.owner {
             return Err(ContractError::Unauthorized {});
