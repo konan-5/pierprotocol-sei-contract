@@ -17,3 +17,23 @@ instantiate-testnet:
 
 balance-hk-testnet:
 	seid q bank balances sei1cz56s8l9yz92jgstv9y4pyxj8vkdnw7acug8n7 --node https://rpc.atlantic-2.seinetwork.io --chain-id atlantic-2
+
+launch-token:
+	seid tx tokenfactory create-denom ${name} --from sei1cz56s8l9yz92jgstv9y4pyxj8vkdnw7acug8n7 --node https://rpc.atlantic-2.seinetwork.io --chain-id atlantic-2 --gas=200000 --fees=2000000usei -b block -y
+
+mint-token:
+	seid tx tokenfactory mint ${amount} --from sei1cz56s8l9yz92jgstv9y4pyxj8vkdnw7acug8n7 --chain-id atlantic-2 -b block -y --node https://rpc.atlantic-2.seinetwork.io --gas=200000 --fees=2000000usei
+
+# 1000factory/sei1cz56s8l9yz92jgstv9y4pyxj8vkdnw7acug8n7/sdasdf
+
+burn-token:
+	seid tx tokenfactory burn ${amount} --from hk --chain-id atlantic-2
+
+list-token:
+	seid q tokenfactory denoms-from-creator sei1cz56s8l9yz92jgstv9y4pyxj8vkdnw7acug8n7 --chain-id atlantic-2 --node https://rpc.atlantic-2.seinetwork.io
+
+send-token:
+	seid tx bank send sei1cz56s8l9yz92jgstv9y4pyxj8vkdnw7acug8n7 sei1g0g6kr73egtysamh6zp6cleqzdafcreyxapgklgnwg49qnveh6rst08jst 100factory/sei1cz56s8l9yz92jgstv9y4pyxj8vkdnw7acug8n7/ktg --chain-id=atlantic-2 -b block -y --node https://rpc.atlantic-2.seinetwork.io --gas=200000 --fees=2000000usei
+
+balance-testnet:
+	seid q bank balances ${address} --node https://rpc.atlantic-2.seinetwork.io --chain-id atlantic-2
