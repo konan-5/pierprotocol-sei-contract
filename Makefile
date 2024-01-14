@@ -37,3 +37,6 @@ send-token:
 
 balance-testnet:
 	seid q bank balances ${address} --node https://rpc.atlantic-2.seinetwork.io --chain-id atlantic-2
+
+prepare:
+	export GOPATH=~/go && export PATH=$PATH:$GOPATH/bin
