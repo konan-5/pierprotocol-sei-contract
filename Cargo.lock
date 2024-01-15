@@ -550,6 +550,7 @@ dependencies = [
  "cw-multi-test",
  "cw-storage-plus 1.2.0",
  "cw2",
+ "cw20",
  "cw20-base",
  "schemars",
  "serde",

@@ -1,12 +1,12 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Addr, Uint128, Coin, BankMsg};
+use cosmwasm_std::{ entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Addr, Uint128, CosmosMsg, WasmMsg };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
+use cw20::{ Cw20ExecuteMsg, Cw20ReceiveMsg };
 
 use crate::error::ContractError;
 use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg, BookListResponse};
-use crate::state::{State, STATE, BookEntry, BOOK_LIST, BOOK_ENTRY_SEQ};
+use crate::state::{BookEntry, BOOK_LIST, BOOK_ENTRY_SEQ};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pierprotocol-sei";
@@ -19,12 +19,8 @@ pub fn instantiate(
     info: MessageInfo,
     msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
-    let state = State {
-        count: msg.count,
-        owner: info.sender.clone(),
-    };
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
-    STATE.save(deps.storage, &state)?;
 
     BOOK_ENTRY_SEQ.save(deps.storage, &0u64)?;
 
@@ -42,31 +38,11 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Increment {} => try_increment(deps),
-        ExecuteMsg::Reset { count } => try_reset(deps, info, count),
         ExecuteMsg::CreateBookEntry { contract, amount, price } => execute_create_book_entry(deps, info, contract, amount, price),
         ExecuteMsg::UpdateBookEntry { id, contract, amount, price } => execute_update_book_entry(deps, info, id, contract, amount, price),
         ExecuteMsg::DeleteBookEntry { id } => execute_delete_book_entry( deps, info, id ),
-        ExecuteMsg::SwapToken { to_address, amount } => execute_swap_token(deps, info, to_address, amount),
+        ExecuteMsg::TransferFrom { cw20_address, sender, recipient, amount } => execute_transfer_from( deps, _env, info, cw20_address, sender, recipient, amount )
     }
-}
-
-pub fn execute_swap_token(
-    deps: DepsMut,
-    info: MessageInfo,
-    to_address: Addr,
-    amount: Coin,
-) -> Result<Response, ContractError> {
-    let send_msg = BankMsg::Send {
-        to_address: to_address.clone().into(),
-        amount: vec![Coin {
-            denom: amount.denom,
-            amount: amount.amount,
-        }],
-    };
-    Ok(Response::new()
-        .add_message(send_msg)
-        .add_attribute("method", "execute_send_token"))
 }
 
 pub fn execute_create_book_entry(
@@ -136,39 +112,35 @@ pub fn execute_delete_book_entry(
         .add_attribute("deleted_book_entry_id", id.to_string()))
 }
 
-pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
-    STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        // state.count += Uint128::from(1u128);
-        state.count += Uint128::new(1);
-        Ok(state)
-    })?;
+pub fn execute_transfer_from(
+    deps: DepsMut,
+    env: Env,
+    info: MessageInfo,
+    cw20_address: String,
+    sender: String,
+    recipient: String,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let msg = Cw20ExecuteMsg::TransferFrom {
+        owner: sender,
+        recipient,
+        amount,
+    };
+    let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: cw20_address,
+        msg: to_json_binary(&msg)?,
+        funds: vec![],
+    });
 
-    Ok(Response::new().add_attribute("method", "try_increment"))
-}
-
-pub fn try_reset(deps: DepsMut, info: MessageInfo, count: Uint128) -> Result<Response, ContractError> {
-    STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        if info.sender != state.owner {
-            return Err(ContractError::Unauthorized {});
-        }
-        state.count = count;
-        Ok(state)
-    })?;
-    Ok(Response::new().add_attribute("method", "reset"))
+    Ok(Response::new().add_message(cosmos_msg))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetCount {} => to_json_binary(&query_count(deps)?),
         QueryMsg::BookEntry { id } => to_json_binary(&query_book_entry(deps, id)?),
         QueryMsg::BookList { start_after, limit } => to_json_binary(&query_book_list(deps, start_after, limit)?),
     }
-}
-
-fn query_count(deps: Deps) -> StdResult<CountResponse> {
-    let state = STATE.load(deps.storage)?;
-    Ok(CountResponse { count: state.count })
 }
 
 fn query_book_entry(deps: Deps, id: u64) -> StdResult<BookEntry> {
