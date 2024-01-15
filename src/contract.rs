@@ -1,11 +1,11 @@
 #[cfg(not(feature = "library"))]
-use cosmwasm_std::{ entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Addr, Uint128, CosmosMsg, WasmMsg };
+use cosmwasm_std::{ entry_point, to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Addr, Uint128, CosmosMsg, WasmMsg, QueryRequest, WasmQuery };
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
-use cw20::{ Cw20ExecuteMsg, Cw20ReceiveMsg };
+use cw20::{ Cw20ExecuteMsg, Cw20QueryMsg, AllowanceResponse };
 
 use crate::error::ContractError;
-use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg, BookListResponse};
+use crate::msg::{ExecuteMsg, InstantiateMsg, QueryMsg, BookListResponse};
 use crate::state::{BookEntry, BOOK_LIST, BOOK_ENTRY_SEQ};
 
 // version info for migration info
@@ -17,7 +17,7 @@ pub fn instantiate(
     deps: DepsMut,
     _env: Env,
     info: MessageInfo,
-    msg: InstantiateMsg,
+    _msg: InstantiateMsg,
 ) -> Result<Response, ContractError> {
 
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
@@ -37,27 +37,41 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreateBookEntry { contract, amount, price } => execute_create_book_entry(deps, info, contract, amount, price),
+        ExecuteMsg::CreateBookEntry { contract, amount, price } => execute_create_book_entry(deps, _env, info, contract, amount, price),
         ExecuteMsg::UpdateBookEntry { id, contract, amount, price } => execute_update_book_entry(deps, info, id, contract, amount, price),
         ExecuteMsg::DeleteBookEntry { id } => execute_delete_book_entry( deps, info, id ),
-        ExecuteMsg::TransferFrom { cw20_address, sender, recipient, amount } => execute_transfer_from( deps, _env, info, cw20_address, sender, recipient, amount )
+        ExecuteMsg::TransferFrom { cw20_address, sender, recipient, amount } => execute_transfer_from( cw20_address, sender, recipient, amount )
     }
 }
 
 pub fn execute_create_book_entry(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
-    contract: Addr,
+    cw20_address: Addr,
     amount: Uint128,
     price: Uint128,
 ) -> Result<Response, ContractError> {
+    let allowance_query = Cw20QueryMsg::Allowance {
+        owner: info.sender.to_string(),
+        spender: env.contract.address.to_string(),
+    };
+    let wasm_query = WasmQuery::Smart {
+        contract_addr: cw20_address.to_string(),
+        msg: to_json_binary(&allowance_query)?,
+    }.into();
+    let allowance_response: AllowanceResponse = deps.querier.query(&QueryRequest::Wasm(wasm_query))?;
+    if amount > allowance_response.allowance {
+        return Err(ContractError::InsufficientAllowance {});
+    }
+
     let id = BOOK_ENTRY_SEQ.update::<_, cosmwasm_std::StdError>(deps.storage, |id| Ok(id + 1))?;
 
     let sender = info.sender;
     let book_entry = BookEntry {
         id,
         owner: sender,
-        contract,
+        contract: cw20_address,
         amount,
         price,
     };
@@ -112,9 +126,6 @@ pub fn execute_delete_book_entry(
 }
 
 pub fn execute_transfer_from(
-    deps: DepsMut,
-    env: Env,
-    info: MessageInfo,
     cw20_address: String,
     sender: String,
     recipient: String,
