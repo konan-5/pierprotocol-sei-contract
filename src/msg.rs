@@ -1,6 +1,6 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
-use cosmwasm_std::{Addr, Uint128};
+use cosmwasm_std::{Addr, Uint128, Coin};
 
 use crate::state::BookEntry;
 
@@ -17,6 +17,7 @@ pub enum ExecuteMsg {
     CreateBookEntry { contract: Addr, amount: Uint128, price: Uint128 },
     UpdateBookEntry { id: u64, contract: Addr, amount: Uint128, price: Uint128 },
     DeleteBookEntry { id: u64 },
+    SwapToken { to_address: Addr, amount: Coin },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -1,6 +1,6 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Addr, Uint128};
+use cosmwasm_std::{to_json_binary, Binary, Deps, DepsMut, Env, MessageInfo, Order, Response, StdResult, Addr, Uint128, Coin, BankMsg};
 use cw2::set_contract_version;
 use cw_storage_plus::Bound;
 
@@ -47,7 +47,26 @@ pub fn execute(
         ExecuteMsg::CreateBookEntry { contract, amount, price } => execute_create_book_entry(deps, info, contract, amount, price),
         ExecuteMsg::UpdateBookEntry { id, contract, amount, price } => execute_update_book_entry(deps, info, id, contract, amount, price),
         ExecuteMsg::DeleteBookEntry { id } => execute_delete_book_entry( deps, info, id ),
+        ExecuteMsg::SwapToken { to_address, amount } => execute_swap_token(deps, info, to_address, amount),
     }
+}
+
+pub fn execute_swap_token(
+    deps: DepsMut,
+    info: MessageInfo,
+    to_address: Addr,
+    amount: Coin,
+) -> Result<Response, ContractError> {
+    let send_msg = BankMsg::Send {
+        to_address: to_address.clone().into(),
+        amount: vec![Coin {
+            denom: amount.denom,
+            amount: amount.amount,
+        }],
+    };
+    Ok(Response::new()
+        .add_message(send_msg)
+        .add_attribute("method", "execute_send_token"))
 }
 
 pub fn execute_create_book_entry(
@@ -141,9 +160,9 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: Uint128) -> Result<Res
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
-        QueryMsg::BookEntry { id } => to_binary(&query_book_entry(deps, id)?),
-        QueryMsg::BookList { start_after, limit } => to_binary(&query_book_list(deps, start_after, limit)?),
+        QueryMsg::GetCount {} => to_json_binary(&query_count(deps)?),
+        QueryMsg::BookEntry { id } => to_json_binary(&query_book_entry(deps, id)?),
+        QueryMsg::BookList { start_after, limit } => to_json_binary(&query_book_list(deps, start_after, limit)?),
     }
 }
 
