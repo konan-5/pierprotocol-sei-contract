@@ -16,5 +16,8 @@ pub enum ContractError {
     InsufficientAllowance {},
 
     #[error("Insufficient amount")]
-    InsufficientAmount {}
+    InsufficientAmount {},
+
+    #[error("Order adress and payment address must not be equal")]
+    NotValidPaymentAddress{},
 }

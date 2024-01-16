@@ -101,6 +101,9 @@ pub fn execute_create_book_entry(
     amount: Uint128,
     price: Uint128,
 ) -> Result<Response, ContractError> {
+    if cw20_address.to_string() == payment_cw20_address.to_string() {
+        return Err(ContractError::NotValidPaymentAddress {});
+    };
     if amount <= Uint128::new(0) {
         return Err(ContractError::InsufficientAmount {});
     };
