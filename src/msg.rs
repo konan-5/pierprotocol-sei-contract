@@ -16,6 +16,7 @@ pub enum ExecuteMsg {
     UpdateBookEntry { id: u64, contract: Addr, amount: Uint128, price: Uint128 },
     DeleteBookEntry { id: u64 },
     TransferFrom { cw20_address: String, sender: String, recipient: String, amount: Uint128 },
+    Buy { id: u64 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -27,7 +28,6 @@ pub enum QueryMsg {
         limit: Option<u32>,
     },
 }
-
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct BookListResponse {

@@ -32,16 +32,29 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreateBookEntry { contract, amount, price } => execute_create_book_entry(deps, _env, info, contract, amount, price),
+        ExecuteMsg::CreateBookEntry { contract, amount, price } => execute_create_book_entry(deps, env, info, contract, amount, price),
         ExecuteMsg::UpdateBookEntry { id, contract, amount, price } => execute_update_book_entry(deps, info, id, contract, amount, price),
         ExecuteMsg::DeleteBookEntry { id } => execute_delete_book_entry( deps, info, id ),
-        ExecuteMsg::TransferFrom { cw20_address, sender, recipient, amount } => execute_transfer_from( cw20_address, sender, recipient, amount )
+        ExecuteMsg::TransferFrom { cw20_address, sender, recipient, amount } => execute_transfer_from( cw20_address, sender, recipient, amount ),
+        ExecuteMsg::Buy { id } => execute_buy( deps, env, info, id ),
     }
+}
+
+pub fn execute_buy(
+    deps: DepsMut,
+    _env: Env,
+    _info: MessageInfo,
+    id: u64,
+) -> Result<Response, ContractError> {
+    let _book_entry = BOOK_LIST.load(deps.storage, id)?;
+
+    Ok(Response::new()
+        .add_attribute("method", "execute_create_book_entry"))
 }
 
 pub fn execute_create_book_entry(
@@ -52,6 +65,10 @@ pub fn execute_create_book_entry(
     amount: Uint128,
     price: Uint128,
 ) -> Result<Response, ContractError> {
+    if amount <= Uint128::new(0) {
+        return Err(ContractError::InsufficientAmount {});
+    };
+
     let allowance_query = Cw20QueryMsg::Allowance {
         owner: info.sender.to_string(),
         spender: env.contract.address.to_string(),
