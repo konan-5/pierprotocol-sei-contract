@@ -40,7 +40,6 @@ pub fn execute(
         ExecuteMsg::CreateBookEntry { cw20_address, payment_cw20_address, amount, price } => execute_create_book_entry(deps, env, info, cw20_address, payment_cw20_address, amount, price),
         ExecuteMsg::UpdateBookEntry { id, cw20_address, payment_cw20_address, amount, price } => execute_update_book_entry(deps, info, id, cw20_address, payment_cw20_address, amount, price),
         ExecuteMsg::DeleteBookEntry { id } => execute_delete_book_entry( deps, info, id ),
-        ExecuteMsg::TransferFrom { cw20_address, sender, recipient, amount } => execute_transfer_from( cw20_address, sender, recipient, amount ),
         ExecuteMsg::Buy { id } => execute_buy( deps, env, info, id ),
     }
 }
@@ -186,26 +185,6 @@ pub fn execute_delete_book_entry(
     Ok(Response::new()
         .add_attribute("method", "execute_delete_book_entry")
         .add_attribute("deleted_book_entry_id", id.to_string()))
-}
-
-pub fn execute_transfer_from(
-    cw20_address: String,
-    sender: String,
-    recipient: String,
-    amount: Uint128,
-) -> Result<Response, ContractError> {
-    let msg = Cw20ExecuteMsg::TransferFrom {
-        owner: sender,
-        recipient,
-        amount,
-    };
-    let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: cw20_address,
-        msg: to_json_binary(&msg)?,
-        funds: vec![],
-    });
-
-    Ok(Response::new().add_message(cosmos_msg))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

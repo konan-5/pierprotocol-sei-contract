@@ -15,7 +15,6 @@ pub enum ExecuteMsg {
     CreateBookEntry { cw20_address: Addr, payment_cw20_address: Addr, amount: Uint128, price: Uint128 },
     UpdateBookEntry { id: u64, cw20_address: Addr, payment_cw20_address: Addr, amount: Uint128, price: Uint128 },
     DeleteBookEntry { id: u64 },
-    TransferFrom { cw20_address: String, sender: String, recipient: String, amount: Uint128 },
     Buy { id: u64 },
 }
 
