@@ -52,16 +52,45 @@ pub fn execute_buy(
     id: u64,
 ) -> Result<Response, ContractError> {
     let book_entry = BOOK_LIST.load(deps.storage, id)?;
-    let allowance = get_allowance(&deps, &info, &book_entry.cw20_address)?;
+    let allowance = get_allowance(&deps, &info, &book_entry.payment_cw20_address)?;
 
     if allowance < book_entry.price {
         return Err(ContractError::InsufficientAmount {});
     };
 
-    // execute_transfer_from(&book_entry.cw20_address, &)
+    // swap token
+    let msg = Cw20ExecuteMsg::TransferFrom {
+        owner: book_entry.owner.to_string(),
+        recipient: info.sender.to_string(),
+        amount: book_entry.amount,
+    };
+
+    let cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: book_entry.cw20_address.to_string(),
+        msg: to_json_binary(&msg)?,
+        funds: vec![],
+    });
+
+    let payment_msg = Cw20ExecuteMsg::TransferFrom {
+        owner: info.sender.to_string(),
+        recipient: book_entry.owner.to_string(),
+        amount: book_entry.price,
+    };
+
+    let payment_cosmos_msg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: book_entry.payment_cw20_address.to_string(),
+        msg: to_json_binary(&payment_msg)?,
+        funds: vec![],
+    });
+
+    // remove book
+    BOOK_LIST.remove(deps.storage, id);
 
     Ok(Response::new()
-        .add_attribute("method", "execute_buy"))
+        .add_message(payment_cosmos_msg)
+        .add_message(cosmos_msg)
+        .add_attribute("method", "execute_buy")
+        .add_attribute("swaped_book_entry_id", id.to_string()))
 }
 
 pub fn execute_create_book_entry(
