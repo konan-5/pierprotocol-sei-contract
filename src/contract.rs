@@ -37,8 +37,8 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreateBookEntry { contract, amount, price } => execute_create_book_entry(deps, env, info, contract, amount, price),
-        ExecuteMsg::UpdateBookEntry { id, contract, amount, price } => execute_update_book_entry(deps, info, id, contract, amount, price),
+        ExecuteMsg::CreateBookEntry { cw20_address, amount, price } => execute_create_book_entry(deps, env, info, cw20_address, amount, price),
+        ExecuteMsg::UpdateBookEntry { id, cw20_address, amount, price } => execute_update_book_entry(deps, info, id, cw20_address, amount, price),
         ExecuteMsg::DeleteBookEntry { id } => execute_delete_book_entry( deps, info, id ),
         ExecuteMsg::TransferFrom { cw20_address, sender, recipient, amount } => execute_transfer_from( cw20_address, sender, recipient, amount ),
         ExecuteMsg::Buy { id } => execute_buy( deps, env, info, id ),
@@ -48,10 +48,12 @@ pub fn execute(
 pub fn execute_buy(
     deps: DepsMut,
     _env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     id: u64,
 ) -> Result<Response, ContractError> {
-    let _book_entry = BOOK_LIST.load(deps.storage, id)?;
+    let book_entry = BOOK_LIST.load(deps.storage, id)?;
+    let _allowance = get_allowance(&deps, &info, &book_entry.cw20_address)?;
+
 
     Ok(Response::new()
         .add_attribute("method", "execute_create_book_entry"))
@@ -59,7 +61,7 @@ pub fn execute_buy(
 
 pub fn execute_create_book_entry(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     cw20_address: Addr,
     amount: Uint128,
@@ -80,7 +82,7 @@ pub fn execute_create_book_entry(
     let book_entry = BookEntry {
         id,
         owner: sender,
-        contract: cw20_address,
+        cw20_address,
         amount,
         price,
     };
@@ -110,7 +112,7 @@ pub fn execute_update_book_entry(
     deps: DepsMut,
     info: MessageInfo,
     id: u64,
-    contract: Addr,
+    cw20_address: Addr,
     amount: Uint128,
     price: Uint128,
 ) -> Result<Response, ContractError> {
@@ -122,7 +124,7 @@ pub fn execute_update_book_entry(
     let updated_book_entry = BookEntry {
         id,
         owner: sender,
-        contract,
+        cw20_address,
         amount,
         price,
     };
@@ -181,7 +183,7 @@ fn query_book_entry(deps: Deps, id: u64) -> StdResult<BookEntry> {
     Ok(BookEntry {
         id: id,
         owner: book_entry.owner,
-        contract: book_entry.contract,
+        cw20_address: book_entry.cw20_address,
         amount: book_entry.amount,
         price: book_entry.price,
     })

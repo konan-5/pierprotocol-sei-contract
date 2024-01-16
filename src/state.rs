@@ -8,7 +8,7 @@ use cw_storage_plus::{Item, Map};
 pub struct BookEntry {
     pub id: u64,
     pub owner: Addr,
-    pub contract: Addr,
+    pub cw20_address: Addr,
     pub amount: Uint128,
     pub price: Uint128,
 }
