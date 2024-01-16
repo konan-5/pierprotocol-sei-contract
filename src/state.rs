@@ -9,6 +9,7 @@ pub struct BookEntry {
     pub id: u64,
     pub owner: Addr,
     pub cw20_address: Addr,
+    pub payment_cw20_address: Addr,
     pub amount: Uint128,
     pub price: Uint128,
 }

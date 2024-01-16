@@ -37,8 +37,8 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::CreateBookEntry { cw20_address, amount, price } => execute_create_book_entry(deps, env, info, cw20_address, amount, price),
-        ExecuteMsg::UpdateBookEntry { id, cw20_address, amount, price } => execute_update_book_entry(deps, info, id, cw20_address, amount, price),
+        ExecuteMsg::CreateBookEntry { cw20_address, payment_cw20_address, amount, price } => execute_create_book_entry(deps, env, info, cw20_address, payment_cw20_address, amount, price),
+        ExecuteMsg::UpdateBookEntry { id, cw20_address, payment_cw20_address, amount, price } => execute_update_book_entry(deps, info, id, cw20_address, payment_cw20_address, amount, price),
         ExecuteMsg::DeleteBookEntry { id } => execute_delete_book_entry( deps, info, id ),
         ExecuteMsg::TransferFrom { cw20_address, sender, recipient, amount } => execute_transfer_from( cw20_address, sender, recipient, amount ),
         ExecuteMsg::Buy { id } => execute_buy( deps, env, info, id ),
@@ -52,11 +52,16 @@ pub fn execute_buy(
     id: u64,
 ) -> Result<Response, ContractError> {
     let book_entry = BOOK_LIST.load(deps.storage, id)?;
-    let _allowance = get_allowance(&deps, &info, &book_entry.cw20_address)?;
+    let allowance = get_allowance(&deps, &info, &book_entry.cw20_address)?;
 
+    if allowance < book_entry.price {
+        return Err(ContractError::InsufficientAmount {});
+    };
+
+    // execute_transfer_from(&book_entry.cw20_address, &)
 
     Ok(Response::new()
-        .add_attribute("method", "execute_create_book_entry"))
+        .add_attribute("method", "execute_buy"))
 }
 
 pub fn execute_create_book_entry(
@@ -64,6 +69,7 @@ pub fn execute_create_book_entry(
     _env: Env,
     info: MessageInfo,
     cw20_address: Addr,
+    payment_cw20_address: Addr,
     amount: Uint128,
     price: Uint128,
 ) -> Result<Response, ContractError> {
@@ -83,6 +89,7 @@ pub fn execute_create_book_entry(
         id,
         owner: sender,
         cw20_address,
+        payment_cw20_address,
         amount,
         price,
     };
@@ -113,6 +120,7 @@ pub fn execute_update_book_entry(
     info: MessageInfo,
     id: u64,
     cw20_address: Addr,
+    payment_cw20_address: Addr,
     amount: Uint128,
     price: Uint128,
 ) -> Result<Response, ContractError> {
@@ -125,6 +133,7 @@ pub fn execute_update_book_entry(
         id,
         owner: sender,
         cw20_address,
+        payment_cw20_address,
         amount,
         price,
     };
@@ -184,6 +193,7 @@ fn query_book_entry(deps: Deps, id: u64) -> StdResult<BookEntry> {
         id: id,
         owner: book_entry.owner,
         cw20_address: book_entry.cw20_address,
+        payment_cw20_address: book_entry.payment_cw20_address,
         amount: book_entry.amount,
         price: book_entry.price,
     })
