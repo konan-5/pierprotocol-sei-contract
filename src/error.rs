@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -12,8 +12,11 @@ pub enum ContractError {
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },
 
-    #[error("Insufficient allowance")]
-    InsufficientAllowance {},
+    #[error("Insufficient allowance - amount: {amount}, allowance: {allowance}")]
+    InsufficientAllowance {
+        amount: Uint128,
+        allowance: Uint128,
+    },
 
     #[error("Insufficient amount")]
     InsufficientAmount {},

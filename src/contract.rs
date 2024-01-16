@@ -46,12 +46,12 @@ pub fn execute(
 
 pub fn execute_buy(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     id: u64,
 ) -> Result<Response, ContractError> {
     let book_entry = BOOK_LIST.load(deps.storage, id)?;
-    let allowance = get_allowance(&deps, &info, &book_entry.payment_cw20_address)?;
+    let allowance = get_allowance(&deps, &env, &info, &book_entry.payment_cw20_address)?;
 
     if allowance < book_entry.price {
         return Err(ContractError::InsufficientAmount {});
@@ -94,7 +94,7 @@ pub fn execute_buy(
 
 pub fn execute_create_book_entry(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     cw20_address: Addr,
     payment_cw20_address: Addr,
@@ -108,9 +108,10 @@ pub fn execute_create_book_entry(
         return Err(ContractError::InsufficientAmount {});
     };
 
-    let allowance = get_allowance(&deps, &info, &cw20_address)?;
+    let allowance = get_allowance(&deps, &env, &info, &cw20_address)?;
+
     if amount > allowance {
-        return Err(ContractError::InsufficientAllowance {});
+        return Err(ContractError::InsufficientAllowance {amount, allowance});
     };
 
     let id = BOOK_ENTRY_SEQ.update::<_, cosmwasm_std::StdError>(deps.storage, |id| Ok(id + 1))?;
@@ -132,10 +133,10 @@ pub fn execute_create_book_entry(
         .add_attribute("new_book_entry", id.to_string()))
 }
 
-fn get_allowance(deps: &DepsMut, info: &MessageInfo, cw20_address: &Addr) -> Result<Uint128, ContractError> {
+fn get_allowance(deps: &DepsMut, env: &Env, info: &MessageInfo, cw20_address: &Addr) -> Result<Uint128, ContractError> {
     let allowance_query = Cw20QueryMsg::Allowance {
         owner: info.sender.to_string(),
-        spender: cw20_address.to_string(),
+        spender: env.contract.address.to_string(),
     };
     let wasm_query = WasmQuery::Smart {
         contract_addr: cw20_address.to_string(),
