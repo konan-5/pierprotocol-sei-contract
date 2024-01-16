@@ -69,18 +69,10 @@ pub fn execute_create_book_entry(
         return Err(ContractError::InsufficientAmount {});
     };
 
-    let allowance_query = Cw20QueryMsg::Allowance {
-        owner: info.sender.to_string(),
-        spender: env.contract.address.to_string(),
-    };
-    let wasm_query = WasmQuery::Smart {
-        contract_addr: cw20_address.to_string(),
-        msg: to_json_binary(&allowance_query)?,
-    }.into();
-    let allowance_response: AllowanceResponse = deps.querier.query(&QueryRequest::Wasm(wasm_query))?;
-    if amount > allowance_response.allowance {
+    let allowance = get_allowance(&deps, &info, &cw20_address)?;
+    if amount > allowance {
         return Err(ContractError::InsufficientAllowance {});
-    }
+    };
 
     let id = BOOK_ENTRY_SEQ.update::<_, cosmwasm_std::StdError>(deps.storage, |id| Ok(id + 1))?;
 
@@ -98,6 +90,20 @@ pub fn execute_create_book_entry(
     Ok(Response::new()
         .add_attribute("method", "execute_create_book_entry")
         .add_attribute("new_book_entry", id.to_string()))
+}
+
+fn get_allowance(deps: &DepsMut, info: &MessageInfo, cw20_address: &Addr) -> Result<Uint128, ContractError> {
+    let allowance_query = Cw20QueryMsg::Allowance {
+        owner: info.sender.to_string(),
+        spender: cw20_address.to_string(),
+    };
+    let wasm_query = WasmQuery::Smart {
+        contract_addr: cw20_address.to_string(),
+        msg: to_json_binary(&allowance_query)?,
+    }.into();
+    let allowance_response: AllowanceResponse = deps.querier.query(&QueryRequest::Wasm(wasm_query))?;
+
+    Ok(allowance_response.allowance)
 }
 
 pub fn execute_update_book_entry(
