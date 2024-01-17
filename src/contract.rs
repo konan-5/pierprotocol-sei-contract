@@ -38,7 +38,7 @@ pub fn execute(
 ) -> Result<Response, ContractError> {
     match msg {
         ExecuteMsg::CreateBookEntry { cw20_address, payment_cw20_address, amount, price } => execute_create_book_entry(deps, env, info, cw20_address, payment_cw20_address, amount, price),
-        ExecuteMsg::UpdateBookEntry { id, cw20_address, payment_cw20_address, amount, price } => execute_update_book_entry(deps, info, id, cw20_address, payment_cw20_address, amount, price),
+        ExecuteMsg::UpdateBookEntry { id, cw20_address, payment_cw20_address, amount, price } => execute_update_book_entry(deps, env, info, id, cw20_address, payment_cw20_address, amount, price),
         ExecuteMsg::DeleteBookEntry { id } => execute_delete_book_entry( deps, info, id ),
         ExecuteMsg::Buy { id } => execute_buy( deps, env, info, id ),
     }
@@ -104,6 +104,7 @@ pub fn execute_create_book_entry(
     if cw20_address.to_string() == payment_cw20_address.to_string() {
         return Err(ContractError::NotValidPaymentAddress {});
     };
+
     if amount <= Uint128::new(0) {
         return Err(ContractError::InsufficientAmount {});
     };
@@ -149,6 +150,7 @@ fn get_allowance(deps: &DepsMut, env: &Env, info: &MessageInfo, cw20_address: &A
 
 pub fn execute_update_book_entry(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     id: u64,
     cw20_address: Addr,
@@ -156,6 +158,19 @@ pub fn execute_update_book_entry(
     amount: Uint128,
     price: Uint128,
 ) -> Result<Response, ContractError> {
+    if cw20_address.to_string() == payment_cw20_address.to_string() {
+        return Err(ContractError::NotValidPaymentAddress {});
+    };
+
+    if amount <= Uint128::new(0) {
+        return Err(ContractError::InsufficientAmount {});
+    };
+
+    let allowance = get_allowance(&deps, &env, &info, &cw20_address)?;
+    if amount > allowance {
+        return Err(ContractError::InsufficientAllowance {amount, allowance});
+    };
+
     let sender = info.sender;
     let book_entry = BOOK_LIST.load(deps.storage, id)?;
     if book_entry.owner != sender {
